@@ -11,6 +11,8 @@ from controllers.zero_controller import ZeroController
 args = argument_parser()
 args.batch_size = 1
 
+args.plant_state_init = torch.tensor([2., 2, 0, 0])
+
 # ------------ 1. Dataset ------------
 dataset = RobotsDataset(random_seed=args.random_seed, horizon=args.horizon, std_ini=args.std_init_plant)
 # divide to train and test
@@ -18,13 +20,12 @@ train_data, test_data = dataset.get_data(num_train_samples=args.num_rollouts, nu
 # data for plots
 t_ext = args.horizon * 5
 plot_data = 0.01 * torch.randn(1, t_ext, train_data.shape[-1])
-plot_data[:, 0, :] = (dataset.x0.detach())
 # batch the data
 train_dataloader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
 
 # ------------ 2. Plant ------------
 plant_input_init = None     # all zero
-plant_state_init = None     # same as xbar
+plant_state_init = args.plant_state_init
 sys = RobotsSystem(xbar=dataset.xbar,
                    x_init=plant_state_init,
                    u_init=plant_input_init,
