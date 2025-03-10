@@ -27,14 +27,11 @@ class CustomDataset(Dataset):
 
     def _generate_data(self, num_samples):
         """
-        Complete the template to extend the "CustomDataset" class
+        This function will be different for each system
         """
         raise NotImplementedError(
             "You must implement the _generate_data function for CustomDataset."
         )
-        # data = ...
-        # assert data.shape[0] == num_samples
-        # return data
 
     def get_data(self, num_train_samples=1024, num_test_samples=1024):
         """
@@ -48,7 +45,7 @@ class CustomDataset(Dataset):
     # ---- save and load functions. no need to modify ----
     def _save_data(self):
         """
-        No need to change. Generates and saves train and test datasets.
+        Generates and saves train and test datasets.
         """
         train_data_full = self._generate_data(1024)
         test_data = self._generate_data(1024)
@@ -61,7 +58,6 @@ class CustomDataset(Dataset):
 
     def _load_data(self):
         """
-        No need to change.
         Loads the data. If data doesn't exist, saves it.
         """
         # check if data exists
