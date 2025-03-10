@@ -12,6 +12,7 @@ args = argument_parser()
 args.batch_size = 1
 
 args.plant_state_init = torch.tensor([2., 2, 0, 0])
+args.xbar = torch.zeros(4)
 
 # ------------ 1. Dataset ------------
 dataset = RobotsDataset(random_seed=args.random_seed, horizon=args.horizon, std_ini=args.std_init_plant)
@@ -26,7 +27,7 @@ train_dataloader = DataLoader(train_data, batch_size=args.batch_size, shuffle=Tr
 # ------------ 2. Plant ------------
 plant_input_init = None     # all zero
 plant_state_init = args.plant_state_init
-sys = RobotsSystem(xbar=dataset.xbar,
+sys = RobotsSystem(xbar=args.xbar,
                    x_init=plant_state_init,
                    u_init=plant_input_init,
                    linear_plant=args.linearize_plant,

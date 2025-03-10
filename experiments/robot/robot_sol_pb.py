@@ -23,6 +23,7 @@ args.non_linearity = "coupling_layers"
 args.batch_size = 2
 
 args.plant_state_init = torch.tensor([2., 2, 0, 0])
+args.xbar = torch.zeros(4)
 
 # ------------ 1. Dataset ------------
 dataset = RobotsDataset(random_seed=args.random_seed, horizon=args.horizon, std_ini=args.std_init_plant)
@@ -37,7 +38,7 @@ train_dataloader = DataLoader(train_data, batch_size=args.batch_size, shuffle=Tr
 # ------------ 2. Plant ------------
 plant_input_init = None     # all zero
 plant_state_init = args.plant_state_init
-sys = RobotsSystem(xbar=dataset.xbar,
+sys = RobotsSystem(xbar=args.xbar,
                    x_init=plant_state_init,
                    u_init=plant_input_init,
                    linear_plant=args.linearize_plant,
@@ -60,7 +61,7 @@ plot_trajectories(x_log[0, :, :], T=t_ext)
 plot_traj_vs_time(t_ext, x_log[0, :, :], u_log[0, :, :])
 
 # ------------ 4. Loss ------------
-Q = torch.eye(4) *100
+Q = torch.eye(4) * 100
 loss_fn = RobotsLoss(
     Q=Q, alpha_u=args.alpha_u,
     alpha_obst=args.alpha_obst,
