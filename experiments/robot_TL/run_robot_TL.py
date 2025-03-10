@@ -23,6 +23,9 @@ args.dim_nl = 4
 args.non_linearity = "coupling_layers"
 args.batch_size = 2
 
+args.plant_state_init = torch.tensor([2., 2, 0, 0])
+args.xbar = torch.zeros(4)
+
 dict_tl = {
     "goal": True,
     "input": True,
@@ -42,20 +45,19 @@ dict_sum_loss = {
 }
 
 # ------------ 1. Dataset ------------
-dataset = RobotsDataset(random_seed=args.random_seed, horizon=args.horizon, std_ini=args.std_init_plant)
+dataset = RobotsDataset(random_seed=args.random_seed, horizon=args.horizon, std_ini=args.std_init_plant, x0=args.plant_state_init)
 # divide to train and test
 train_data, test_data = dataset.get_data(num_train_samples=args.num_rollouts, num_test_samples=500)
 # data for plots
 t_ext = args.horizon
-plot_data = torch.zeros(1, t_ext, train_data.shape[-1])
-plot_data[:, 0, :] = dataset.x0.detach()
+plot_data = torch.zeros(1, t_ext, train_data.shape[-1]) + args.plant_state_init.reshape([1,1,-1])
 # batch the data
 train_dataloader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
 
 # ------------ 2. Plant ------------
 plant_input_init = None     # all zero
-plant_state_init = None     # same as xbar
-sys = RobotsSystem(xbar=dataset.xbar,
+plant_state_init = None     # all zero
+sys = RobotsSystem(xbar=args.xbar,
                    x_init=plant_state_init,
                    u_init=plant_input_init,
                    linear_plant=args.linearize_plant,
@@ -81,14 +83,6 @@ plot_trajectories(x_log[0, :, :], T=t_ext, radius_robot=dict_tl["robot_radius"],
 plot_traj_vs_time(args.horizon, x_log[0, :args.horizon, :], u_log[0, :args.horizon, :])
 total_n_params = sum(p.numel() for p in ctl.parameters() if p.requires_grad)
 
-# ------------ 4. Loss ------------
-# Q = torch.eye(4)
-# loss_fn = RobotsLoss(
-#     Q=Q, alpha_u=args.alpha_u,
-#     loss_bound=None, sat_bound=None,
-#     alpha_obst=args.alpha_obst,
-# )
-
 # ------------ 5. Optimizer ------------
 valid_data = train_data      # use the entire train data for validation
 assert not (valid_data is None and args.return_best)
@@ -97,7 +91,7 @@ optimizer = torch.optim.Adam(ctl.parameters(), lr=args.lr)
 # ------------ 6. Training ------------
 print('------------ Begin training ------------')
 best_valid_loss = 1e6
-best_params = ctl.state_dict()  # ctl.get_parameters_as_vector()
+best_params = ctl.state_dict()
 loss = 1e6
 t = time.time()
 for epoch in range(1+args.epochs):
@@ -137,7 +131,6 @@ for epoch in range(1+args.epochs):
             if loss_valid.item() < best_valid_loss:
                 best_valid_loss = loss_valid.item()
                 best_params = copy.deepcopy(ctl.state_dict())
-                # ctl.get_parameters_as_vector()  # record state dict if best on valid
                 msg += ' (best so far)'
         duration = time.time() - t
         msg += ' ---||--- time: %.0f s' % duration
@@ -153,29 +146,6 @@ for epoch in range(1+args.epochs):
 # set to best seen during training
 if args.return_best:
     ctl.load_state_dict(best_params)
-
-
-# # evaluate on the train data
-# print('[INFO] evaluating the trained controller on %i training rollouts.' % train_data.shape[0])
-# with torch.no_grad():
-#     x_log, _, u_log = sys.rollout(
-#         controller=ctl, data=train_data, train=False,
-#     )   # use the entire train data, not a batch
-#     # evaluate losses
-#     loss = loss_fn.forward(x_log, u_log)
-#     print('Loss: %.4f' % loss)
-#
-# # evaluate on the test data
-# print('[INFO] evaluating the trained controller on %i test rollouts.' % test_data.shape[0])
-# with torch.no_grad():
-#     # simulate over horizon steps
-#     x_log, _, u_log = sys.rollout(
-#         controller=ctl, data=test_data, train=False,
-#     )
-#     # loss
-#     test_loss = loss_fn.forward(x_log, u_log).item()
-#     print("Loss: %.4f" % test_loss)
-
 
 # plot closed-loop trajectories using the trained controller
 print('Plotting closed-loop trajectories using the trained controller...')
