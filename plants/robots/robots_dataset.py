@@ -15,7 +15,7 @@ class RobotsDataset(CustomDataset):
         self.state_dim = 4
 
         if x0 is None:
-            self.x0 = torch.zeros(4)
+            self.x0 = torch.zeros(self.state_dim)
         else:
             self.x0 = x0
 
